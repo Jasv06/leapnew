@@ -42,8 +42,8 @@ class LeapMotionListener(Leap.Listener):
         frame = controller.frame() 
         
         for hand in frame.hands:
-            handType = "Left Hand" if hand.is_left else "Right Hand"
-            print handType + "Hand ID:" + str(hand.id) + "Palm Position:" + str(hand.palm_position)
+            handType = "Left Hand " if hand.is_left else "Right Hand "
+            print handType + "Hand ID: " + str(hand.id) + " Palm Position: " + str(hand.palm_position)
             
             strength = hand.grab_strength
             hand_identifier = hand.id

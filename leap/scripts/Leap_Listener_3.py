@@ -1,106 +1,188 @@
 import rospy
 import numpy as np
-import ray
 import roslib
+import time 
+import sys
 from interbotix_xs_modules.arm import InterbotixManipulatorXS
+from interbotix_xs_modules.gripper import InterbotixGripperXS
 from std_msgs.msg import Float32
 from geometry_msgs.msg import Point
 from std_msgs.msg import Int32 
 from leap.msg import *
 
-x_coordi = 0.3 
-y_coordi = 0.0
-z_coordi = 0.2
-other =  0.0
-otro = 0.0
-otroo = 0.0
+"""The stable positon refers to the position where the sensor detected the hand stable which usually tends to lag behind for a couple of seconds from the xyz noprmla"""
 
+x_coordi_sensor_stable = 0.0
+y_coordi_sensor_stable = 0.0
+z_coordi_sensor_stable = 0.0
 
+x_coordi_sensor = 0.0
+y_coordi_sensor = 0.0
+z_coordi_sensor = 0.0
+
+hand_open_or_close = 0.0
+
+hand_id = 0.0
+
+#pinzas = InterbotixGripperXS("rx150","gripper",gripper_pressure = 0.5, gripper_pressure_lower_limit=150,gripper_pressure_upper_limit=350)
 bot = InterbotixManipulatorXS("rx150","arm","gripper")
-#bot.arm.set_ee_pose_components(x=0.3,z=0.2,moving_time = 2)
+
 bot.arm.go_to_home_pose()
-#bot.arm.go_to_sleep_pose()
-def LeapXYZg(data): 
+
+bot.gripper.open()
+
+#pub = rospy.Publisher("/rx150/commands/joint_single", JointSingleCommand, queue_size = 1)
+
+time.sleep(3)
+
+#msg = JointSingleCommand()
+
+bot.arm.set_single_joint_position("waist", -np.pi/2.0)
+bot.arm.set_ee_cartesian_trajectory(x=0.05,z=-0.17)
+
+bot.gripper.close()
+#msg.name = 'gripper'
+#msg.cmd = -0.5
+
+#pub.publish(msg)
+
+time.sleep(2)
+#pinzas.gripper.set_pressure(pressure=0.5)
+#pinzas.gripper.close()
+
+bot.arm.set_ee_cartesian_trajectory(x=-0.05,z=0.17)
+
+time.sleep(1)
+
+#bot.arm.set_single_joint_position("waist", 0)
+bot.arm.go_to_home_pose()
+time.sleep(2)
+
+def LeapXYZ_stable(data): 
    
-   global x_coordi 
-   global y_coordi 
-   global z_coordi
-   global other
-   global otro
-   global otroo
+   global x_coordi_sensor_stable 
+   global y_coordi_sensor_stable 
+   global z_coordi_sensor_stable
+
+   x_coordi_sensor_stable = data.x
+   y_coordi_sensor_stable = data.y
+   z_coordi_sensor_stable = data.z  
+
+def LeapXYZ_normal(data):
+
+   global x_coordi_sensor 
+   global y_coordi_sensor 
+   global z_coordi_sensor
+
+   x_coordi_sensor = data.x
+   y_coordi_sensor = data.y
+   z_coordi_sensor = data.z
+
+def Hands_ID(data):
    
-   x_coordi = data.x
-   y_coordi = data.y
-   z_coordi = data.z  
-   other = data.x
-   otro = data.y
-   otroo = data.z
+   global hand_id
    
-def listenerr():
-  
+   hand_id = data.data
+   
+def hand_OPEN_or_CLOSE(data):
+
+   global hand_open_or_close
+   
+   hand_open_or_close = data.data
+   
+def main():
+   
    rospy.init_node('rx150_robot_manipulation')
    
-   #r = rospy.Rate(100)
+   count = 0
    
-   #pub = rospy.Publisher("/rx150/commands/joint_group", JointGroupCommand, queue_size = 1)
-   print("Sending messages to the robot!")
-   while not rospy.is_shutdown():
-      global otro
-      #msg = JointGroupCommand()
-         
-      rospy.Subscriber("/Leap/XYZ", Point)#, LeapXYZg)
-      rospy.Subscriber("/Leap_Hand_OPENorCLOSE", Float32)
-      rospy.Subscriber("/WhichHandisit", Float32)
-      rospy.Subscriber("/LeapHandAngles", Point)
-      rospy.Subscriber("/Stable_Pos", Point, LeapXYZg)
-      rospy.Subscriber("/Hand_velocity", Point)
-     
+   #rospy.init_node('rx150_robot_manipulation')
+   
+   r = rospy.Rate(100)
+   """Pub can be used whene desired to publish to a topic and control the servo motors directly  via a ros topic
+   pub = rospy.Publisher("/rx150/commands/joint_group", JointGroupCommand, queue_size = 1)
+   """
+   
+   print("Ready to Send messages to the robot! Press enter to start.")
+   text = input("")
+   if text == "":
+      while not rospy.is_shutdown():
+       
+         rospy.Subscriber("/Leap/XYZ", Point, LeapXYZ_normal)
+         rospy.Subscriber("/Leap_Hand_OPENorCLOSE", Float32, hand_OPEN_or_CLOSE)
+         rospy.Subscriber("/WhichHandisit", Float32, Hands_ID)
+         rospy.Subscriber("/LeapHandAngles", Point)
+         rospy.Subscriber("/Stable_Pos", Point, LeapXYZ_stable)
+         rospy.Subscriber("/Hand_velocity", Point)
+       
       
-      #print("x: %f " % x_coordi)
-      #print("otro: %f" % otro)
-      #print("z: %f " % z_coordi)
+         hand_indentification = hand_id
       
-      #if y_coordi > 0.35:
-      #   otro = 0.09
-
-      #elif y_coordi < 0.34 and otro > 0.22:
-      #   otro = 0.01
+         hand_status = hand_open_or_close
       
-      #elif y_coordi < 0.21:
-      #   otro = -0.09
-      #else:
-      #   otro = 0.0
-         
-      lol = other 
-      lool = otro #((-1.00*otro))
-      x_ = x_coordi
-      y_ = y_coordi
-      z_ = z_coordi
-      combo = otroo
+         x_rob_normal = z_coordi_sensor 
+         y_rob_normal = x_coordi_sensor
+         z_rob_normal = y_coordi_sensor
       
-      bot.arm.set_ee_cartesian_trajectory(x=combo)
-      #bot.arm.set_ee_cartesian_trajectory(z=lool)
-      #bot.arm.set_ee_cartesian_trajectory(z = -lool)
-      #bot.arm.set_single_joint_position("shoulder", lool)
-      #bot.arm.set_single_joint_position("elbow", z_)
-      bot.arm.set_single_joint_position("waist", lol)
-      #bot.arm.set_ee_cartesian_trajectory(x=-combo)
-      #bot.arm.set_ee_cartesian_trajectory(z= lool)
-      #bot.arm.publish_positions(format(x_,'.3f'),format(y_,'.3f'),format(z_,'.3f'))
-      #msg.name = 'arm'
-      #msg.cmd = [waist,shoulder,elbow,0,0]
+         x_rob_stable = z_coordi_sensor_stable + 0.3 
+         y_rob_stable = x_coordi_sensor_stable
+         z_rob_stable = y_coordi_sensor_stable 
       
-      #rospy.loginfo(msg)
-      #pub.publish(msg)
-      rospy.sleep(1)
-      #r.sleep()
-      #point = Point()
-    
+         if z_rob_stable == 0:
+             z_rob_stable = z_rob_stable + 0.3
+      
+         if z_rob_stable < 0.15:
+             z_rob_stable = z_rob_stable + 0.05
+      
+         """y_rob_stable is substracted 0.01 since the number is negative so we will get an addition of negative numbers"""
+      
+         #if y_rob_stable < 0:
+         #    y_rob_stable = y_rob_stable - 0.01
+      
+        
+         # elif z_rob_stable > 0.06:
+         #    z_rob_stable = z_rob_stable + 0.02
+               
+         # if z_rob_normal == 0:
+         #    z_rob_normal = z_rob_normal + 0.3
+      
+      
+         #text = input()
+         #if text == "":
+         bot.arm.set_ee_pose_components(x=x_rob_stable,y=y_rob_stable,z=z_rob_stable)
+         if count > 10:
+             bot.gripper.open()
+             bot.arm.go_to_home_pose()
+             bot.arm.go_to_sleep_pose()
+             break
+             #if z_rob_stable > (z_rob_stable - 0.02) and z_rob_stable < (z_rob_stable + 0.02) and x_rob_stable > (x_rob_stable - 0.02) and x_rob_stable < (x_rob_stable + 0.02)
+             #else:
+ 
+         """
+      text = input()
+      try:
+        if text == "":
+           bot.arm.set_ee_pose_components(x=x_rob_stable,y=y_rob_stable,z=z_rob_stable)
+      except KeyboardInterrupt:
+           pass
+         """   
+         count += 1
+      
+         #if x_rob_stable < (x_rob_stable + 0.02)and x_rob_stable > (x_rob_stable - 0.02)
+         #   print("working perfectly") 
+         #if z_rob_stable > (z_coordi_sensor + 0.02) and z_rob
+         #print("x: ", x_rob_stable)
+         #print("y: ", y_rob_stable)
+         #print("z: ", z_rob_stable)
+         print("hand id: %f" % hand_indentification)
+         print("counter is = %i " % count)
+      
+         #time.sleep(2)
      
    
 if __name__ == '__main__':
      try:
-       listenerr()
+       main()
      except rospy.ROSInterruptException:
        pass
-
+     
