@@ -220,7 +220,7 @@ include_directories(
 #add_executable(client src/client.cpp)
 #target_link_libraries(client ${catkin_LIBRARIES})
 #target_link_libraries(client Leap)
-catkin_install_python(PROGRAMS scripts/server_Leap.py scripts/Leap_Listener.py scripts/Leap_Listener_2.py scripts/Leap_Listener_3.py
+catkin_install_python(PROGRAMS scripts/server_Leap.py scripts/Leap_Listener_5.py scripts/gestures.py scripts/hand_status.py scripts/LeapListener.py
 DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
